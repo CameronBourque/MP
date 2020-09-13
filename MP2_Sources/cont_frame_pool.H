@@ -20,7 +20,10 @@
 /* DEFINES */
 /*--------------------------------------------------------------------------*/
 
-/* -- (none) -- */
+//These are used for representing frame states
+#define FREE 0x0
+#define ALLOCATED 0x1
+#define HEAD_OF_SEQUENCE 0x2
 
 /*--------------------------------------------------------------------------*/
 /* INCLUDES */
@@ -42,8 +45,19 @@ class ContFramePool {
     
 private:
     /* -- DEFINE YOUR CONT FRAME POOL DATA STRUCTURE(s) HERE. */
-    
+    unsigned char * bitmap;
+    unsigned long n_free_frames;
+    unsigned long base_frame_no;
+    unsigned long n_frames;
+    unsigned long info_frame_no;
+    unsigned long n_info_frames;
+
+    static ContFramePool* first;
+    static ContFramePool* last;
+
 public:
+    ContFramePool* prev;
+    ContFramePool* next;
 
     // The frame size is the same as the page size, duh...    
     static const unsigned int FRAME_SIZE = Machine::PAGE_SIZE; 
@@ -91,6 +105,13 @@ public:
      _n_frames: Number of contiguous frames to mark as inaccessible.
      */
     
+    void release_frame_sequence(unsigned long _first_frame_no);
+    /*
+     Releases a previously allocated contiguous sequence of frames
+     back to its frame pool.
+     The frame sequence is identified by the number of the first frame.
+     */
+
     static void release_frames(unsigned long _first_frame_no);
     /*
      Releases a previously allocated contiguous sequence of frames
