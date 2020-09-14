@@ -1,8 +1,8 @@
 /*
  File: ContFramePool.C
  
- Author:
- Date  : 
+ Author: Cameron Bourque
+ Date  : 09/13/2020
  
  */
 
@@ -221,8 +221,7 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
 
     unsigned long i = 0;
     unsigned char mask = 0xC0;
-    while(i*4 < n_frames){
-        //find frame that is free
+    while(i*4 < base_frame_no + n_frames){
         while((bitmap[i] & mask) && mask){
             mask >>= 2;
             frame_no++;
@@ -242,10 +241,12 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
             //if sequence is open the allocate on it and return head frame
             if(frame == frame_no + _n_frames){
                 bitmap[bitmap_index] |= HEAD_OF_SEQUENCE << (6 - offset);
-
                 for(frame = frame_no + 1; frame < frame_no + _n_frames; frame++){
                     bitmap[(frame - base_frame_no) / 4] |= ALLOCATED << (6 - (((frame - base_frame_no) % 4) * 2));
                 }
+//				Console::puts("allocated ");Console::puti(_n_frames);
+//				Console::puts(" frames starting at frame ");Console::puti(frame_no);
+//				Console::puts("\n");
                 return frame_no;
             }
         }
@@ -282,16 +283,16 @@ void ContFramePool::release_frame_sequence(unsigned long _first_frame_no)
 {
     unsigned long bitmap_index = (_first_frame_no - base_frame_no) / 4;
     unsigned int offset = ((_first_frame_no - base_frame_no) % 4) * 2;
-    if(bitmap[bitmap_index] & (0xC0 >> offset) == HEAD_OF_SEQUENCE << (6 - offset)){
+    if((bitmap[bitmap_index] & (0xC0 >> offset)) == (HEAD_OF_SEQUENCE << (6 - offset))){
         unsigned char state = FREE << (6 - offset);
         unsigned char mask = bitmap[bitmap_index] - (bitmap[bitmap_index] & (0xC0 >> offset));
         bitmap[bitmap_index] = mask | state;
         n_free_frames++;
         
         for(unsigned long frame = _first_frame_no + 1;
-                (bitmap[(bitmap_index = (frame - base_frame_no) / 4)] &
-                 (0xC0 >> (offset = ((frame - base_frame_no) % 4) * 2)) ==
-                 ALLOCATED << (6 - (((frame - base_frame_no) % 4) * 2))) &&
+                ((bitmap[(bitmap_index = (frame - base_frame_no) / 4)] &
+                 (0xC0 >> (offset = ((frame - base_frame_no) % 4) * 2))) ==
+                 (ALLOCATED << (6 - (((frame - base_frame_no) % 4) * 2)))) &&
                 (frame < base_frame_no + n_frames);
                 frame++){
             state = FREE << (6 - offset);
@@ -301,7 +302,7 @@ void ContFramePool::release_frame_sequence(unsigned long _first_frame_no)
         }
     }
     else{
-        Console::puts("Error, first frame is not head of sequence");
+        Console::puts("Error, first frame is not head of sequence\n");
         assert(false);
     }
 }
@@ -314,6 +315,7 @@ void ContFramePool::release_frames(unsigned long _first_frame_no)
     while(iter){
         if(_first_frame_no >= iter->base_frame_no && _first_frame_no < iter->base_frame_no + iter->n_frames){
             iter->release_frame_sequence(_first_frame_no);
+            return;
         }
         else{
             iter = iter->next;

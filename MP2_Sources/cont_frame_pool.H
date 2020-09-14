@@ -20,7 +20,7 @@
 /* DEFINES */
 /*--------------------------------------------------------------------------*/
 
-//These are used for representing frame states
+//These are used for representing frame states to make code more readable
 #define FREE 0x0
 #define ALLOCATED 0x1
 #define HEAD_OF_SEQUENCE 0x2
