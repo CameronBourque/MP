@@ -133,6 +133,7 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
                              unsigned long _info_frame_no,
                              unsigned long _n_info_frames)
 {
+	Console::puts("initializing...\n");
     // Bitmap must fit in a single frame!
     assert(_n_frames <= FRAME_SIZE * 4);
 
@@ -157,20 +158,23 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
     n_free_frames = _n_frames;
 
     if(info_frame_no == 0) {
-        bitmap = (unsigned char *)(base_frame_no * (FRAME_SIZE / 2));
+        bitmap = (unsigned char *)(base_frame_no * FRAME_SIZE);
     }
     else {
-        bitmap = (unsigned char *)(info_frame_no * (FRAME_SIZE / 2));
+        bitmap = (unsigned char *)(info_frame_no * FRAME_SIZE);
     }
 
     assert((n_frames % 4) == 0);
 
+    //free all frames in bitmap
     for(unsigned long i = 0; i*4 < n_frames; i++){
-	Console::puti(i);Console::puts(" ");
         bitmap[i] = FREE;
     }
 
     if(info_frame_no == 0){
+        if(n_info_frames == 0){
+            bitmap[0] = HEAD_OF_SEQUENCE << 6;
+        }
         for(unsigned long i = 0; i*4 < n_info_frames; i++){
             //determine if we need to mark head of sequence or not
             if(i == 0){
@@ -198,6 +202,7 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
                     rem--;
                 }
             }
+            //otherwise allocate all frames at index
             else{
                 unsigned char mask = ALLOCATED << 4;
                 while(mask){
@@ -217,17 +222,17 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
     // Any frames left to allocate?
     assert(n_free_frames >= _n_frames);
 
-    // Find a frame series length _n_frames that is not being used and return its frame index.
-    // Mark that frame as being used in the bitmap.
     unsigned long frame_no = base_frame_no;
 
     unsigned long i = 0;
     unsigned char mask = 0xC0;
     while(i*4 < base_frame_no + n_frames){
+        //find a free frame
         while((bitmap[i] & mask) && mask){
             mask >>= 2;
             frame_no++;
         }
+        //if mask is not 0 then we found a free frame
         if(mask){
             assert(frame_no + _n_frames < base_frame_no + n_frames);
             unsigned long frame = frame_no;
@@ -243,6 +248,7 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
             //if sequence is open then allocate on it and return head frame
             if(frame == frame_no + _n_frames){
                 bitmap[bitmap_index] |= HEAD_OF_SEQUENCE << (6 - offset);
+                n_free_frames--;
                 for(frame = frame_no + 1; frame < frame_no + _n_frames; frame++){
                     bitmap[(frame - base_frame_no) / 4] |= ALLOCATED << (6 - (((frame - base_frame_no) % 4) * 2));
                     n_free_frames--;
@@ -252,8 +258,17 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
         }
 
         //keep searching...
-        i++;
-        mask = 0xC0;
+        mask >>= 1;
+        if(!mask){
+            //increment i and have frame_no catch up
+            i++;
+            mask = 0xC0;
+            frame_no = base_frame_no + (i*4);
+        }
+        else{
+            //just increment frame_no in case next frame is free
+            frame_no++;
+        }
     }
     Console::puts("Error, unable to find sequence of ");
     Console::puti(_n_frames);
@@ -281,6 +296,7 @@ void ContFramePool::mark_inaccessible(unsigned long _base_frame_no,
 
 void ContFramePool::release_frame_sequence(unsigned long _first_frame_no)
 {
+    //release the head of sequence
     unsigned long bitmap_index = (_first_frame_no - base_frame_no) / 4;
     unsigned int offset = ((_first_frame_no - base_frame_no) % 4) * 2;
     if((bitmap[bitmap_index] & (0xC0 >> offset)) == (HEAD_OF_SEQUENCE << (6 - offset))){
@@ -288,7 +304,8 @@ void ContFramePool::release_frame_sequence(unsigned long _first_frame_no)
         unsigned char mask = bitmap[bitmap_index] - (bitmap[bitmap_index] & (0xC0 >> offset));
         bitmap[bitmap_index] = mask | state;
         n_free_frames++;
-        
+       
+        //release all allocated frames after the head of sequence 
         for(unsigned long frame = _first_frame_no + 1;
                 ((bitmap[(bitmap_index = (frame - base_frame_no) / 4)] &
                  (0xC0 >> (offset = ((frame - base_frame_no) % 4) * 2))) ==
@@ -309,15 +326,18 @@ void ContFramePool::release_frame_sequence(unsigned long _first_frame_no)
 
 void ContFramePool::release_frames(unsigned long _first_frame_no)
 {
+    //find the pool containing the frame
     ContFramePool* iter = first;
     assert(iter != NULL);
 
     while(iter){
         if(_first_frame_no >= iter->base_frame_no && _first_frame_no < iter->base_frame_no + iter->n_frames){
+            //release the frame
             iter->release_frame_sequence(_first_frame_no);
             return;
         }
         else{
+            //keep searching...
             iter = iter->next;
         }
     }
