@@ -108,6 +108,10 @@ int main() {
 		process_mem_pool.release_frames(f);
 		process_mem_pool.release_frames(d);
 		process_mem_pool.release_frames(s);
+
+                t = process_mem_pool.get_frames(1000);
+		Console::puti(t);Console::puts("-");Console::puti(t+1000-1);Console::puts("\n");
+                process_mem_pool.release_frames(t);
     
     /* -- NOW LOOP FOREVER */
     Console::puts("Testing is DONE. We will do nothing forever\n");
