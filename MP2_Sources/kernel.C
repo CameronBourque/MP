@@ -75,18 +75,18 @@ int main() {
 
     /* ---- PROCESS POOL -- */
 
-/*
     unsigned long n_info_frames = ContFramePool::needed_info_frames(PROCESS_POOL_SIZE);
 
     unsigned long process_mem_pool_info_frame = kernel_mem_pool.get_frames(n_info_frames);
-    
+
     ContFramePool process_mem_pool(PROCESS_POOL_START_FRAME,
                                    PROCESS_POOL_SIZE,
                                    process_mem_pool_info_frame,
                                    n_info_frames);
-    
+
     process_mem_pool.mark_inaccessible(MEM_HOLE_START_FRAME, MEM_HOLE_SIZE);
-*/
+	Console::puti(MEM_HOLE_START_FRAME);Console::puts("-");Console::puti(MEM_HOLE_START_FRAME + MEM_HOLE_SIZE - 1);Console::puts("\n");
+
     /* -- MOST OF WHAT WE NEED IS SETUP. THE KERNEL CAN START. */
 
     Console::puts("Hello World!\n");
@@ -96,6 +96,18 @@ int main() {
     test_memory(&kernel_mem_pool, 32);
 
     /* ---- Add code here to test the frame pool implementation. */
+		unsigned long t = process_mem_pool.get_frames(5);
+		unsigned long f = process_mem_pool.get_frames(2500);
+		unsigned long d = process_mem_pool.get_frames(300);
+		unsigned long s = process_mem_pool.get_frames(50);
+		Console::puti(t);Console::puts("-");Console::puti(t+5-1);Console::puts("\n");
+		Console::puti(f);Console::puts("-");Console::puti(f+2500-1);Console::puts("\n");
+		Console::puti(d);Console::puts("-");Console::puti(d+300-1);Console::puts("\n");
+		Console::puti(s);Console::puts("-");Console::puti(s+50-1);Console::puts("\n");
+		process_mem_pool.release_frames(t);
+		process_mem_pool.release_frames(f);
+		process_mem_pool.release_frames(d);
+		process_mem_pool.release_frames(s);
     
     /* -- NOW LOOP FOREVER */
     Console::puts("Testing is DONE. We will do nothing forever\n");
