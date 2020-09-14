@@ -173,6 +173,9 @@ void Console::putch(const char _c){
         csr_y++;
     }
 
+    //OUTPUT TO TERMINAL
+    Machine::outportb(0xe9, _c);
+
     /* Scroll the screen if needed, and finally move the cursor */
     scroll();
     move_cursor();
@@ -202,6 +205,19 @@ void Console::putui(const unsigned int _n) {
   putch('>');
 }
 
+void Console::putub(const unsigned char _n) {
+  char foostr[15];
+
+  int i = 0;
+  for(unsigned char mask = 0x80; i < 8; i++){
+    uint2str((_n & mask) >> (7-i), &foostr[i]);
+    mask >>= 1;
+  }
+
+  putch('<');
+  puts(foostr);
+  putch('>');
+}
 
 /* -- COLOR CONTROL -- */
 void Console::set_TextColor(const unsigned char _forecolor, 

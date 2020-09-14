@@ -144,7 +144,8 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
         next = NULL;
     }
     else{
-        prev = last; 
+        prev = last;
+        last->next = this;
         next = NULL;
         last = this;
     }
@@ -165,6 +166,7 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
     assert((n_frames % 4) == 0);
 
     for(unsigned long i = 0; i*4 < n_frames; i++){
+	Console::puti(i);Console::puts(" ");
         bitmap[i] = FREE;
     }
 
@@ -238,11 +240,12 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
                     break;
                 }
             }
-            //if sequence is open the allocate on it and return head frame
+            //if sequence is open then allocate on it and return head frame
             if(frame == frame_no + _n_frames){
                 bitmap[bitmap_index] |= HEAD_OF_SEQUENCE << (6 - offset);
                 for(frame = frame_no + 1; frame < frame_no + _n_frames; frame++){
                     bitmap[(frame - base_frame_no) / 4] |= ALLOCATED << (6 - (((frame - base_frame_no) % 4) * 2));
+                    n_free_frames--;
                 }
                 return frame_no;
             }
