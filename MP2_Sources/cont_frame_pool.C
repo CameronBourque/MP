@@ -244,9 +244,6 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
                 for(frame = frame_no + 1; frame < frame_no + _n_frames; frame++){
                     bitmap[(frame - base_frame_no) / 4] |= ALLOCATED << (6 - (((frame - base_frame_no) % 4) * 2));
                 }
-//				Console::puts("allocated ");Console::puti(_n_frames);
-//				Console::puts(" frames starting at frame ");Console::puti(frame_no);
-//				Console::puts("\n");
                 return frame_no;
             }
         }
