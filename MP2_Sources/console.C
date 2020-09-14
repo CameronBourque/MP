@@ -205,12 +205,12 @@ void Console::putui(const unsigned int _n) {
   putch('>');
 }
 
-void Console::putub(const unsigned char _n) {
+void Console::putub(const unsigned char _c) {
   char foostr[15];
 
   int i = 0;
   for(unsigned char mask = 0x80; i < 8; i++){
-    uint2str((_n & mask) >> (7-i), &foostr[i]);
+    uint2str((_c & mask) >> (7-i), &foostr[i]);
     mask >>= 1;
   }
 

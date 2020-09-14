@@ -102,7 +102,7 @@ public:
   static void putui(const unsigned int _u);
   /* Display a unsigned integer on the screen.*/
 
-  static void putub(const unsigned char _u);
+  static void putub(const unsigned char _c);
 
   static void set_TextColor(unsigned char _fore_color, unsigned char _back_color);
   /* Set the color of the foreground and background. */
