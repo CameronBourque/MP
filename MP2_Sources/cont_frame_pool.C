@@ -133,7 +133,6 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
                              unsigned long _info_frame_no,
                              unsigned long _n_info_frames)
 {
-	Console::puts("initializing...\n");
     // Bitmap must fit in a single frame!
     assert(_n_frames <= FRAME_SIZE * 4);
 
