@@ -1,8 +1,8 @@
 /*
  File: ContFramePool.C
  
- Author:
- Date  : 
+ Author: Cameron Bourque
+ Date  : 09/13/2020
  
  */
 
@@ -121,42 +121,230 @@
 /* FORWARDS */
 /*--------------------------------------------------------------------------*/
 
-/* -- (none) -- */
+ContFramePool* ContFramePool::first = NULL;
+ContFramePool* ContFramePool::last = NULL;
 
 /*--------------------------------------------------------------------------*/
 /* METHODS FOR CLASS   C o n t F r a m e P o o l */
 /*--------------------------------------------------------------------------*/
 
 ContFramePool::ContFramePool(unsigned long _base_frame_no,
-                             unsigned long _nframes,
+                             unsigned long _n_frames,
                              unsigned long _info_frame_no,
                              unsigned long _n_info_frames)
 {
-    // TODO: IMPLEMENTATION NEEEDED!
-    assert(false);
+    // Bitmap must fit in a single frame!
+    assert(_n_frames <= FRAME_SIZE * 4);
+
+    //add this to linked list
+    if(first == NULL){
+        first = this;
+        last = this;
+        prev = NULL;
+        next = NULL;
+    }
+    else{
+        prev = last;
+        last->next = this;
+        next = NULL;
+        last = this;
+    }
+
+    base_frame_no = _base_frame_no;
+    n_frames = _n_frames;
+    info_frame_no = _info_frame_no;
+    n_info_frames = _n_info_frames;
+    n_free_frames = _n_frames;
+
+    if(info_frame_no == 0) {
+        bitmap = (unsigned char *)(base_frame_no * FRAME_SIZE);
+    }
+    else {
+        bitmap = (unsigned char *)(info_frame_no * FRAME_SIZE);
+    }
+
+    assert((n_frames % 4) == 0);
+
+    //free all frames in bitmap
+    for(unsigned long i = 0; i*4 < n_frames; i++){
+        bitmap[i] = FREE;
+    }
+
+    if(info_frame_no == 0){
+        if(n_info_frames == 0){
+            bitmap[0] = HEAD_OF_SEQUENCE << 6;
+        }
+        for(unsigned long i = 0; i*4 < n_info_frames; i++){
+            //determine if we need to mark head of sequence or not
+            if(i == 0){
+                bitmap[i] = HEAD_OF_SEQUENCE << 6;
+            }
+            else{
+                bitmap[i] = ALLOCATED << 6;
+            }
+            n_free_frames--;
+            
+            //if last set of frames then check how many to fill
+            if((i+1)*4 >= n_info_frames){
+                unsigned long rem = n_info_frames % 4;
+                if(rem == 0){
+                    rem = 3;
+                }
+                else{
+                    rem--;
+                }
+                unsigned char mask = ALLOCATED << 4;
+                while(rem){
+                    bitmap[i] |= mask;
+                    mask >>= 2;
+                    n_free_frames--;
+                    rem--;
+                }
+            }
+            //otherwise allocate all frames at index
+            else{
+                unsigned char mask = ALLOCATED << 4;
+                while(mask){
+                    bitmap[i] |= mask;
+                    mask >>= 2;
+                    n_free_frames--;
+                }
+            }
+        }
+    }
+
+    Console::puts("Frame pool initialized\n");
 }
 
 unsigned long ContFramePool::get_frames(unsigned int _n_frames)
 {
-    // TODO: IMPLEMENTATION NEEEDED!
-    assert(false);
+    // Any frames left to allocate?
+    assert(n_free_frames >= _n_frames);
+
+    unsigned long frame_no = base_frame_no;
+
+    unsigned long i = 0;
+    unsigned char mask = 0xC0;
+    while(i*4 < base_frame_no + n_frames){
+        //find a free frame
+        while((bitmap[i] & mask) && mask){
+            mask >>= 2;
+            frame_no++;
+        }
+        //if mask is not 0 then we found a free frame
+        if(mask){
+            assert(frame_no + _n_frames < base_frame_no + n_frames);
+            unsigned long frame = frame_no;
+            unsigned long bitmap_index = (frame - base_frame_no) / 4;
+            unsigned int offset = ((frame - base_frame_no) % 4) * 2;
+            //check whole sequence to see if it's free
+            for(; frame < frame_no + _n_frames; frame++){
+                if(bitmap[(frame - base_frame_no) / 4] &
+                        (0xC0 >> (((frame - base_frame_no) % 4) * 2))){
+                    break;
+                }
+            }
+            //if sequence is open then allocate on it and return head frame
+            if(frame == frame_no + _n_frames){
+                bitmap[bitmap_index] |= HEAD_OF_SEQUENCE << (6 - offset);
+                n_free_frames--;
+                for(frame = frame_no + 1; frame < frame_no + _n_frames; frame++){
+                    bitmap[(frame - base_frame_no) / 4] |= ALLOCATED << (6 - (((frame - base_frame_no) % 4) * 2));
+                    n_free_frames--;
+                }
+                return frame_no;
+            }
+        }
+
+        //keep searching...
+        mask >>= 1;
+        if(!mask){
+            //increment i and have frame_no catch up
+            i++;
+            mask = 0xC0;
+            frame_no = base_frame_no + (i*4);
+        }
+        else{
+            //just increment frame_no in case next frame is free
+            frame_no++;
+        }
+    }
+    Console::puts("Error, unable to find sequence of ");
+    Console::puti(_n_frames);
+    Console::puts(" free frames\n");
+    return 0;
 }
 
 void ContFramePool::mark_inaccessible(unsigned long _base_frame_no,
                                       unsigned long _n_frames)
 {
-    // TODO: IMPLEMENTATION NEEEDED!
-    assert(false);
+    assert((_base_frame_no >= base_frame_no) && (_base_frame_no + _n_frames <= base_frame_no + n_frames));
+    // Mark all frames in the range as being used.
+    unsigned long i;
+    for(i = _base_frame_no; i < _base_frame_no + _n_frames; i++){
+        unsigned long bitmap_index = (i - base_frame_no) / 4;
+        unsigned int offset = ((i - base_frame_no) % 4) * 2;
+        unsigned char state = (i == _base_frame_no ? HEAD_OF_SEQUENCE : ALLOCATED) << (6 - offset);
+        unsigned char mask = bitmap[bitmap_index] - (bitmap[bitmap_index] & (0xC0 >> offset));
+
+        // Update bitmap
+        bitmap[bitmap_index] = mask | state;
+        n_free_frames--;
+    }
+}
+
+void ContFramePool::release_frame_sequence(unsigned long _first_frame_no)
+{
+    //release the head of sequence
+    unsigned long bitmap_index = (_first_frame_no - base_frame_no) / 4;
+    unsigned int offset = ((_first_frame_no - base_frame_no) % 4) * 2;
+    if((bitmap[bitmap_index] & (0xC0 >> offset)) == (HEAD_OF_SEQUENCE << (6 - offset))){
+        unsigned char state = FREE << (6 - offset);
+        unsigned char mask = bitmap[bitmap_index] - (bitmap[bitmap_index] & (0xC0 >> offset));
+        bitmap[bitmap_index] = mask | state;
+        n_free_frames++;
+       
+        //release all allocated frames after the head of sequence 
+        for(unsigned long frame = _first_frame_no + 1;
+                ((bitmap[(bitmap_index = (frame - base_frame_no) / 4)] &
+                 (0xC0 >> (offset = ((frame - base_frame_no) % 4) * 2))) ==
+                 (ALLOCATED << (6 - (((frame - base_frame_no) % 4) * 2)))) &&
+                (frame < base_frame_no + n_frames);
+                frame++){
+            state = FREE << (6 - offset);
+            mask = bitmap[bitmap_index] - (bitmap[bitmap_index] & (0xC0 >> offset));
+            bitmap[bitmap_index] = mask | state;
+            n_free_frames++;
+        }
+    }
+    else{
+        Console::puts("Error, first frame is not head of sequence\n");
+        assert(false);
+    }
 }
 
 void ContFramePool::release_frames(unsigned long _first_frame_no)
 {
-    // TODO: IMPLEMENTATION NEEEDED!
+    //find the pool containing the frame
+    ContFramePool* iter = first;
+    assert(iter != NULL);
+
+    while(iter){
+        if(_first_frame_no >= iter->base_frame_no && _first_frame_no < iter->base_frame_no + iter->n_frames){
+            //release the frame
+            iter->release_frame_sequence(_first_frame_no);
+            return;
+        }
+        else{
+            //keep searching...
+            iter = iter->next;
+        }
+    }
+    Console::puts("Error, frame not in list");
     assert(false);
 }
 
 unsigned long ContFramePool::needed_info_frames(unsigned long _n_frames)
 {
-    // TODO: IMPLEMENTATION NEEEDED!
-    assert(false);
+    return (_n_frames / (FRAME_SIZE * 4)) + (_n_frames % (FRAME_SIZE * 4) > 0 ? 1 : 0);
 }
