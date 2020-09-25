@@ -173,6 +173,9 @@ void Console::putch(const char _c){
         csr_y++;
     }
 
+    //OUTPUT TO TERMINAL
+    Machine::outportb(0xe9, _c);
+
     /* Scroll the screen if needed, and finally move the cursor */
     scroll();
     move_cursor();
