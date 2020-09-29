@@ -33,17 +33,13 @@ PageTable::PageTable()
   unsigned long info_frame_number = (unsigned long) kernel_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
   page_directory = (unsigned long*)(info_frame_number * PAGE_SIZE);
 
-  Console::puts("info frame: ");Console::putui(info_frame_number);Console::puts(" page_dir addr: ");Console::putui((unsigned long)page_directory);Console::puts("\n");
-
   //Allocate the page table on the stack
   info_frame_number = (unsigned long) kernel_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
   unsigned long* page_table = (unsigned long*)(info_frame_number * PAGE_SIZE);
 
-  Console::puts("page_table addr: ");Console::putui((unsigned long)page_table);Console::puts("\n");
-
   //Fill the page table
   unsigned long address = 0;
-  for(int i = 1; i < 1024; i++)
+  for(int i = 0; i < 1024; i++)
   {
     page_table[i] = address | 0x3; //set to supervisor lvl, r/w, present
     address += 4096;
@@ -51,11 +47,9 @@ PageTable::PageTable()
 
   //Fill the page directory
   page_directory[0] = ((unsigned long)page_table) | 0x3;
-  Console::puts("page dir addr = ");Console::putui(page_directory[0]);Console::puts("\n");
-  Console::puts("page table[1] addr = ");Console::putui((unsigned long)(&page_table[1]));Console::puts("\n");
   for(int i = 1; i < 1024; i++)
   {
-    page_directory[i] = 0x2;
+    page_directory[i] = 0x2; //set to supervisor lvl, r/w, not present
   }
 
   Console::puts("Constructed Page Table object\n");
@@ -65,20 +59,13 @@ PageTable::PageTable()
 void PageTable::load()
 {
   current_page_table = this;
-  Console::puts("Current CR3: ");Console::putui((unsigned long)read_cr3);Console::puts("\n");
-  Console::puts("Page directory addr: ");Console::putui((unsigned long)page_directory);Console::puts("\n");
   write_cr3((unsigned long)page_directory);
-  Console::puts("CR3 after writing: ");Console::putui((unsigned long)read_cr3);Console::puts("\n");
   Console::puts("Loaded page table\n");
 }
 
 void PageTable::enable_paging()
 {
-  Console::puts("writing cr0\n");
-  Console::putui((unsigned long)read_cr0);Console::puts("\n");
   write_cr0(read_cr0() | 0x80000000);
-  Console::putui((unsigned long)read_cr0);Console::puts("\n");
-  Console::puts("updating bool val\n");
   paging_enabled  = 1;
   Console::puts("Enabled paging\n");
 }
