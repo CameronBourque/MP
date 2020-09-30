@@ -205,6 +205,36 @@ void Console::putui(const unsigned int _n) {
   putch('>');
 }
 
+void Console::putub(const unsigned int _n) {
+  char foostr[64];
+
+  unsigned int mask;
+  int i = 0;
+  for(mask = 0x80000000; i < 32 && mask; i++) {
+    uint2str((_n & mask) >> (31-i), &foostr[i]);
+    mask >>= 1;
+  }
+
+  putch('<');
+  puts(foostr);
+  putch('>');
+}
+
+void Console::puterr(const unsigned int _n) {
+  char foostr[4];
+
+  unsigned int mask;
+  int i = 0;
+  for(mask = (0x1 << 2); i < 3 && mask; i++) {
+    uint2str((_n & mask) >> (2-i), &foostr[i]);
+    mask >>= 1;
+  }
+
+  putch('<');
+  puts(foostr);
+  putch('>');
+}
+
 
 /* -- COLOR CONTROL -- */
 void Console::set_TextColor(const unsigned char _forecolor, 

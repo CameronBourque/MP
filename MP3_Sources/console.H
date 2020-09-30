@@ -101,6 +101,9 @@ public:
 
   static void putui(const unsigned int _u);
   /* Display a unsigned integer on the screen.*/
+  
+  static void putub(const unsigned int _u);
+  static void puterr(const unsigned int _u);
 
   static void set_TextColor(unsigned char _fore_color, unsigned char _back_color);
   /* Set the color of the foreground and background. */
