@@ -33,8 +33,8 @@ PageTable::PageTable()
   unsigned long info_frame_number = (unsigned long) kernel_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
   page_directory = (unsigned long*)(info_frame_number * PAGE_SIZE);
 
-  //Allocate the page table on the stack
-  info_frame_number = (unsigned long) kernel_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
+  //Allocate the page table
+  info_frame_number = (unsigned long) process_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
   unsigned long* page_table = (unsigned long*)(info_frame_number * PAGE_SIZE);
 
   //Fill the page table
@@ -95,7 +95,7 @@ void PageTable::handle_fault(REGS * _r)
     if(!(pde[0] & 0x1))
     {
       //create page table
-      unsigned long info_frame_number = (unsigned long) kernel_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
+      unsigned long info_frame_number = (unsigned long) process_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
       unsigned long* page_table = (unsigned long*)(info_frame_number * PAGE_SIZE);
       pde[0] = ((unsigned long)page_table) | 0x7;
       
