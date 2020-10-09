@@ -30,7 +30,7 @@ void PageTable::init_paging(ContFramePool * _kernel_mem_pool,
 PageTable::PageTable()
 {
   //Allocate the page directory in the kernel frame pool
-  unsigned long info_frame_number = (unsigned long) kernel_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
+  unsigned long info_frame_number = (unsigned long) process_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
   page_directory = (unsigned long*)(info_frame_number * PAGE_SIZE);
 
   //Allocate the page table
@@ -46,11 +46,13 @@ PageTable::PageTable()
   }
 
   //Fill the page directory
-  page_directory[0] = ((unsigned long)page_table) | 0x3;
-  for(int i = 1; i < 1024; i++)
+  page_directory[0] = ((unsigned long)page_table) | 0x3; //set to supervisor lvl, r/w, present
+  for(int i = 1; i < 1023; i++)
   {
     page_directory[i] = 0x2; //set to supervisor lvl, r/w, not present
   }
+  //Make the last entry of page directory point to itself
+  page_directory[1023] = ((unsigned long)page_directory) | 0x3; //set to supervisor lvl, r/w, present
 
   Console::puts("Constructed Page Table object\n");
 }
