@@ -86,6 +86,7 @@ void PageTable::handle_fault(REGS * _r)
   //indexes of the page directory and page table to access
   unsigned long dir_index = read_cr2() >> 22;
   unsigned long pt_index = (read_cr2() & pte_mask) >> 12;
+  unsigned long rec_index = (read_cr2() & val_mask) >> 2;
 
   //get a pointer to the page directory entry where the fault is
   unsigned long* pde = &(current_page_table->page_directory[dir_index]);
@@ -100,9 +101,16 @@ void PageTable::handle_fault(REGS * _r)
       unsigned long info_frame_number = (unsigned long) process_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
       unsigned long* page_table = (unsigned long*)(info_frame_number * PAGE_SIZE);
       pde[0] = ((unsigned long)page_table) | 0x7;
-      
+
       //create frame for the index in the page table
       page_table[pt_index] = (((unsigned long)process_mem_pool->get_frames(1)) * PAGE_SIZE) | 0x7;
+      for(int i = 0; i < 1024; i++)
+      {
+        if(i != pt_index)
+        {
+          page_table[i] = 0x6; //set user lvl, r/w, not present
+        }
+      }
     }
     else
     {
