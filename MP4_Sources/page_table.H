@@ -85,6 +85,17 @@ public:
   static void handle_fault(REGS * _r);
   /* The page fault handler. */
 
+  static void fix_fault(unsigned long* pde, unsigned long pt_index, unsigned long val_mask);
+  /* Helper function for page faults. */
+
+  // -- NEW IN MP4
+
+  void register_pool(VMPool * _vm_pool);
+  /* Register a virtual memory pool with the page table. */
+
+  void free_page(unsigned long _page_no);
+  /* If page is valid, release frame and mark page invalid. */
+
 };
 
 #endif
