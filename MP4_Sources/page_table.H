@@ -26,6 +26,7 @@
 #include "machine.H"
 #include "exceptions.H"
 #include "cont_frame_pool.H"
+#include "vm_pool.H"
 
 /*--------------------------------------------------------------------------*/
 /* FORWARDS */
@@ -84,9 +85,6 @@ public:
 
   static void handle_fault(REGS * _r);
   /* The page fault handler. */
-
-  static void fix_fault(unsigned long* pde, unsigned long pt_index, unsigned long val_mask);
-  /* Helper function for page faults. */
 
   // -- NEW IN MP4
 

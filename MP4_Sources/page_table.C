@@ -30,11 +30,11 @@ void PageTable::init_paging(ContFramePool * _kernel_mem_pool,
 PageTable::PageTable()
 {
   //Allocate the page directory in the kernel frame pool
-  unsigned long info_frame_number = (unsigned long) process_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
+  unsigned long info_frame_number = (unsigned long) process_mem_pool->get_frames(1);
   page_directory = (unsigned long*)(info_frame_number * PAGE_SIZE);
 
   //Allocate the page table
-  info_frame_number = (unsigned long) process_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
+  info_frame_number = (unsigned long) process_mem_pool->get_frames(1);
   unsigned long* page_table = (unsigned long*)(info_frame_number * PAGE_SIZE);
 
   //Fill the page table
@@ -79,89 +79,82 @@ void PageTable::handle_fault(REGS * _r)
   //only need 3 least significant bits for error determination
   unsigned int err = _r->err_code & 0x7;
 
+  bool supervisor_mode = !(err & 4);
+  bool read_only = !(err & 2);
+  bool page_not_present = !(err & 1);
+
   //masks for CR2 and table entries
   unsigned long pte_mask = 0x3FF000;
   unsigned long val_mask = 0xFFF;
 
-  //indexes of the page directory and page table to access
-  unsigned long dir_index = read_cr2() >> 22;
-  unsigned long pt_index = (read_cr2() & pte_mask) >> 12;
-  unsigned long rec_index = (read_cr2() & val_mask) >> 2;
-  Console::puts("dir index = ");Console::putui(dir_index);Console::puts("\n");
-  Console::puts("pt index  = ");Console::putui(pt_index);Console::puts("\n");
-  Console::puts("rec index = ");Console::putui(rec_index);Console::puts("\n");
-
-  Console::puts("err code  = ");Console::putui(err);Console::puts("\n");
-
-  //get a pointer to the page directory entry where the fault is
-  unsigned long* page_dir = (unsigned long*) 0xFFFFF000;
-  unsigned long* pde = &(page_dir[dir_index]);
-
-  if(!(err & 0x1))
+  //is the page not present?
+  if(page_not_present)
   {
-    //are we recursively going into page dir?
-    if(dir_index == 1023)
-    {
-      //do this to make sure address is set correctly
-      page_dir = (unsigned long*) (0xFFFFF000 | (pde[0] - (pde[0] & val_mask)));
-      pde = &(page_dir[pt_index]);
+    //update page table
+    unsigned long fault_addr = read_cr2();
+    unsigned long* page_dir = (unsigned long*) (0xFFFFF000 | ((unsigned long)current_page_table->page_directory));
+    unsigned long dir_index = (unsigned long) (fault_addr & 0xFFC00000) >> 22;
+    unsigned long pde = page_dir[dir_index];
+    unsigned long* page_table = (unsigned long*) (0xFFC00000 | (dir_index << 12)); //page table gets assigned here!!!
+    unsigned long pt_index = (fault_addr & 0x3FF000) >> 12;
 
-      //do we do another recursive call?
-      if(pt_index == 1023)
-      {
-        //again to double check correctness
-        page_dir = (unsigned long*) (0xFFFFF000 | (pde[0] - (pde[0] & val_mask)));
-        pde = &(page_dir[pt_index]);
-        
-        Console::puts("????\n");
-      }
-      //or are we going into a page table?
-      else
-      {
-        fix_fault(pde, rec_index, val_mask);
-      }
+    Console::puts("dir index = ");Console::putui(dir_index);Console::puts("\n");
+    Console::puts("pt index  = ");Console::putui(pt_index);Console::puts("\n");
+    Console::puts("pte addr  =");Console::putui((unsigned long)&page_table[pt_index]);Console::puts("\n");
+    Console::puts("pde  =");Console::putui(pde);Console::puts("\n");
+
+    //do we need to allocate a page table?
+    if(!pde & 1)
+    {
+      //request a page for page table
+      unsigned long frame_no = process_mem_pool->get_frames(1);
+      page_dir[dir_index] = (unsigned long)(frame_no << 12);
+      page_dir[dir_index] |= 0x3;
+      Console::puts("pde  =");Console::putui(pde);Console::puts("\n");
+    }
+    
+    //get a new frame
+    unsigned long new_frame_no = 0;
+    if(!dir_index)
+    {
+      //directly mapped frame
+      new_frame_no = kernel_mem_pool->get_frames(1);
     }
     else
     {
-      Console::puts("here\n");
-      fix_fault(pde, pt_index, val_mask);
+      new_frame_no = process_mem_pool->get_frames(1);
+    }
+
+    Console::puts("here\n");
+    Console::puts("pte =");Console::putui(page_table[pt_index]);Console::puts("\n");
+    //set page table entry to new frame
+    page_table[pt_index] = (unsigned long)(new_frame_no << 12);
+    Console::puts("pte =");Console::putui(page_table[pt_index]);Console::puts("\n");
+
+    //do we set r/w or just read only? (also mark present)
+    if(read_only)
+    {
+      page_table[pt_index] |= 1;
+    }
+    else
+    {
+      page_table[pt_index] |= 3;
+    }
+
+    //do we need to set user mode
+    if(!supervisor_mode)
+    {
+      page_table[pt_index] |= 4;
     }
   }
+  //or is it a protection fault?
   else
   {
-    Console::puts("Error code = ");Console::putui(err);Console::puts("\n");
+    Console::puts("Protection Fault Occurred!!!");Console::putui(err);Console::puts("\n");
+    assert(0);
   }
 
   Console::puts("handled page fault\n");
-}
-
-void PageTable::fix_fault(unsigned long* pde, unsigned long pt_index, unsigned long val_mask)
-{
-  //is the page fault in the directory?
-  if(!(pde[0] & 0x1))
-  {
-    //create page table
-    unsigned long info_frame_number = (unsigned long) process_mem_pool->get_frames(ENTRIES_PER_PAGE * 4 / PAGE_SIZE);
-    unsigned long* page_table = (unsigned long*)(info_frame_number * PAGE_SIZE);
-    pde[0] = ((unsigned long)page_table) | 0x7;
-
-    //create frame for the index in the page table
-    page_table[pt_index] = (((unsigned long)process_mem_pool->get_frames(1)) * PAGE_SIZE) | 0x7;
-  }
-  //or page table?
-  else
-  {
-    Console::puts("else\n");
-    //check if the page fault is in the page table
-    unsigned long* page_table = (unsigned long*) (0xFFC00000 | (pde[0] - (pde[0] & val_mask)));
-    Console::putui(page_table[pt_index] & 0x1);Console::puts("\n");
-    if(!(page_table[pt_index] & 0x1))
-    {
-      Console::puts("in\n");
-      //create frame for the index in the page table
-      page_table[pt_index] = (((unsigned long)process_mem_pool->get_frames(1)) * PAGE_SIZE) | 0x7;
-    }
-  }
 }
 
 void PageTable::register_pool(VMPool * _vm_pool)
