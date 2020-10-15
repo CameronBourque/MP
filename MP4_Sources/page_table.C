@@ -106,26 +106,20 @@ void PageTable::handle_fault(REGS * _r)
     }
     assert(legit);
 
-    //update page table
-    unsigned long* page_dir = (unsigned long*) (0xFFFFF000 | ((unsigned long)current_page_table->page_directory));
+    //get page table and page dir
+    unsigned long* page_dir = (unsigned long*) (0xFFFFF000);
     unsigned long dir_index = (unsigned long) (fault_addr & 0xFFC00000) >> 22;
     unsigned long pde = page_dir[dir_index];
     unsigned long* page_table = (unsigned long*) (0xFFC00000 | (dir_index << 12));
     unsigned long pt_index = (fault_addr & 0x3FF000) >> 12;
 
-    Console::puts("dir index = ");Console::putui(dir_index);Console::puts("\n");
-    Console::puts("pt index  = ");Console::putui(pt_index);Console::puts("\n");
-    Console::puts("pte addr  =");Console::putui((unsigned long)&page_table[pt_index]);Console::puts("\n");
-    Console::puts("pde  =");Console::putui(pde);Console::puts("\n");
-
     //do we need to allocate a page table?
-    if(!pde & 1)
+    if(!(pde & 1))
     {
       //request a page for page table
       unsigned long frame_no = vm_pool->frame_pool->get_frames(1);
       page_dir[dir_index] = (unsigned long)(frame_no << 12);
       page_dir[dir_index] |= 0x3;
-      Console::puts("pde  =");Console::putui(pde);Console::puts("\n");
     }
     
     //get a new frame
@@ -140,10 +134,8 @@ void PageTable::handle_fault(REGS * _r)
       new_frame_no = vm_pool->frame_pool->get_frames(1);
     }
 
-    Console::puts("pte =");Console::putui(page_table[pt_index]);Console::puts("\n");
     //set page table entry to new frame
     page_table[pt_index] = (unsigned long)(new_frame_no << 12);
-    Console::puts("pte =");Console::putui(page_table[pt_index]);Console::puts("\n");
 
     //do we set r/w or just read only? (also mark present)
     if(read_only)
@@ -167,8 +159,6 @@ void PageTable::handle_fault(REGS * _r)
     Console::puts("Protection Fault Occurred!!!");Console::putui(err);Console::puts("\n");
     assert(0);
   }
-
-  Console::puts("handled page fault\n");
 }
 
 void PageTable::register_pool(VMPool * _vm_pool)

@@ -63,24 +63,24 @@ VMPool::VMPool(unsigned long  _base_address,
     frame_pool = _frame_pool;
     page_table = _page_table;
 
-    Console::puts("base addr: ");Console::putui(base_address);Console::puts("\n");
-
     //set up region list
     region_list = (Region*) base_address;    
     region_list[0].address = base_address;
     region_list[0].size = 1;
 
+    for(int i = 1; i < REGION_SIZE; i++)
+    {
+      region_list[i].address = 0;
+      region_list[i].size = 0;
+    }
+
     Console::puts("Constructed VMPool object.\n");
 }
 
 unsigned long VMPool::allocate(unsigned long _size) {
-    Console::puts("allocating\n");
-
     //add address to region
     int index = 0;
     unsigned long addr = 0;
-
-    unsigned long frames = (_size / PageTable::PAGE_SIZE) + ((_size % PageTable::PAGE_SIZE == 0) ? 0 : 1);
 
     while(index < REGION_SIZE)
     {
@@ -92,7 +92,7 @@ unsigned long VMPool::allocate(unsigned long _size) {
 
       //check if frame can fit
       unsigned long temp_addr = region_list[index-1].address;
-      temp_addr += (region_list[index-1].size / PageTable::PAGE_SIZE) + ((region_list[index-1].size % PageTable::PAGE_SIZE == 0) ? 0 : 1);
+      temp_addr += (region_list[index-1].size * PageTable::PAGE_SIZE);
 
       //is this the last available address?
       if(index + 1 == REGION_SIZE)
@@ -112,13 +112,19 @@ unsigned long VMPool::allocate(unsigned long _size) {
         {
           if(region_list[temp_index].address != 0)
           {
+            temp_addr = region_list[temp_index].address;
             break;
           }
           temp_index++;
         }
 
         //can it fit?
-        if(temp_addr + _size < region_list[temp_index].address)
+        if(temp_index >= REGION_SIZE)
+        {
+          addr = temp_addr;
+          break;
+        }
+        else if(temp_addr + _size < region_list[temp_index].address)
         {
           addr = temp_addr;
           break;
@@ -138,7 +144,6 @@ unsigned long VMPool::allocate(unsigned long _size) {
 }
 
 void VMPool::release(unsigned long _start_address) {
-    Console::puts("releasing\n");
     //make sure address is in range
     assert(_start_address >= base_address && _start_address < (base_address + size));
 
@@ -161,29 +166,29 @@ void VMPool::release(unsigned long _start_address) {
 
 //should be above first 4MB!!!
 bool VMPool::is_legitimate(unsigned long _address) {
-    Console::puts("checking address ");Console::putui(_address);Console::puts("\n");
-    //address must not be in first 4MB and is within base_address and base_address + size
-    if(_address < (4 << 20) || _address < base_address || _address >= (base_address + size))
-    {
-      Console::puts("Checked whether address is part of an allocated region.\n");
-      return false;
-    }
-
     bool retval = false;
-    //check allocated addresses
-    for(unsigned long i = 0; i < REGION_SIZE; i++)
-    {
-      if(_address >= region_list[i].address &&
-         _address < (region_list[i].address + region_list[i].size * PageTable::PAGE_SIZE))
-      {
-        retval = true;
-      }
-    }
-
     //if address is the address of the regions list then return true
     if(_address == base_address)
     {
       retval = true;
+    }
+    //address must not be in first 4MB and is within base_address and base_address + size
+    else if(_address < (4 << 20) || _address < base_address || _address >= base_address + size)
+    {
+      Console::puts("Checked whether address is part of an allocated region.\n");
+      return false;
+    }
+    else
+    {
+      //check allocated addresses
+      for(unsigned long i = 0; i < REGION_SIZE; i++)
+      {
+        if(_address >= region_list[i].address &&
+           _address < (region_list[i].address + region_list[i].size * PageTable::PAGE_SIZE))
+        {
+          retval = true;
+        }
+      }
     }
 
     Console::puts("Checked whether address is part of an allocated region.\n");
