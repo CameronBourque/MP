@@ -18,7 +18,8 @@
 /* DEFINES */
 /*--------------------------------------------------------------------------*/
 
-/* -- (none) -- */
+//Size of region list
+#define REGION_SIZE 512
 
 /*--------------------------------------------------------------------------*/
 /* INCLUDES */
@@ -26,6 +27,7 @@
 
 #include "utils.H"
 #include "cont_frame_pool.H"
+#include "page_table.H"
 
 /*--------------------------------------------------------------------------*/
 /* DATA STRUCTURES */
@@ -35,6 +37,11 @@
 /* We need this to break a circular include sequence. */
 class PageTable;
 
+struct Region {
+  unsigned long address;
+  unsigned long size;
+};
+
 /*--------------------------------------------------------------------------*/
 /* V M  P o o l  */
 /*--------------------------------------------------------------------------*/
@@ -42,8 +49,15 @@ class PageTable;
 class VMPool { /* Virtual Memory Pool */
 private:
    /* -- DEFINE YOUR VIRTUAL MEMORY POOL DATA STRUCTURE(s) HERE. */
+   unsigned long base_address; /* Hold base address of VM pool */
+   unsigned long size; /* Hold size of VM pool */
+   PageTable* page_table; /* Hold pointer to page table VM pool is in */
 
 public:
+   ContFramePool* frame_pool; /* Hold pointer to frame pool we allocate to */
+   Region* region_list; /* Hold list of allocated regions */
+   VMPool* next;
+
    VMPool(unsigned long  _base_address,
           unsigned long  _size,
           ContFramePool *_frame_pool,

@@ -9,6 +9,7 @@ unsigned int PageTable::paging_enabled = 0;
 ContFramePool * PageTable::kernel_mem_pool = NULL;
 ContFramePool * PageTable::process_mem_pool = NULL;
 unsigned long PageTable::shared_size = 0;
+VMPool * PageTable::vm_list = NULL;
 
 
 
@@ -90,12 +91,26 @@ void PageTable::handle_fault(REGS * _r)
   //is the page not present?
   if(page_not_present)
   {
+    //check that fault_addr is legit and get vm pool
+    unsigned long fault_addr = read_cr2(); //check vm pool this belongs to and check legit
+    bool legit = false;
+    VMPool* vm_pool = vm_list;
+    while(vm_pool != NULL)
+    {
+      legit = vm_pool->is_legitimate(fault_addr);
+      if(legit)
+      {
+        break;
+      }
+      vm_pool = vm_pool->next;
+    }
+    assert(legit);
+
     //update page table
-    unsigned long fault_addr = read_cr2();
     unsigned long* page_dir = (unsigned long*) (0xFFFFF000 | ((unsigned long)current_page_table->page_directory));
     unsigned long dir_index = (unsigned long) (fault_addr & 0xFFC00000) >> 22;
     unsigned long pde = page_dir[dir_index];
-    unsigned long* page_table = (unsigned long*) (0xFFC00000 | (dir_index << 12)); //page table gets assigned here!!!
+    unsigned long* page_table = (unsigned long*) (0xFFC00000 | (dir_index << 12));
     unsigned long pt_index = (fault_addr & 0x3FF000) >> 12;
 
     Console::puts("dir index = ");Console::putui(dir_index);Console::puts("\n");
@@ -107,7 +122,7 @@ void PageTable::handle_fault(REGS * _r)
     if(!pde & 1)
     {
       //request a page for page table
-      unsigned long frame_no = process_mem_pool->get_frames(1);
+      unsigned long frame_no = vm_pool->frame_pool->get_frames(1);
       page_dir[dir_index] = (unsigned long)(frame_no << 12);
       page_dir[dir_index] |= 0x3;
       Console::puts("pde  =");Console::putui(pde);Console::puts("\n");
@@ -122,10 +137,9 @@ void PageTable::handle_fault(REGS * _r)
     }
     else
     {
-      new_frame_no = process_mem_pool->get_frames(1);
+      new_frame_no = vm_pool->frame_pool->get_frames(1);
     }
 
-    Console::puts("here\n");
     Console::puts("pte =");Console::putui(page_table[pt_index]);Console::puts("\n");
     //set page table entry to new frame
     page_table[pt_index] = (unsigned long)(new_frame_no << 12);
@@ -159,10 +173,36 @@ void PageTable::handle_fault(REGS * _r)
 
 void PageTable::register_pool(VMPool * _vm_pool)
 {
-  //
+  if(vm_list == NULL)
+  {
+    vm_list = _vm_pool;
+  }
+  else
+  {
+    VMPool* iter = vm_list;
+    while(iter->next != NULL)
+    {
+      iter = iter->next;
+    }
+    iter->next = _vm_pool;
+  }
 }
 
 void PageTable::free_page(unsigned long _page_no)
 {
-  //
+  //get page dir and page table
+  unsigned long* page_dir = (unsigned long*) (0xFFFFF000 | ((unsigned long)current_page_table->page_directory));
+  unsigned long dir_index = (unsigned long) (_page_no & 0xFFC00000) >> 22;
+  unsigned long* page_table = (unsigned long*) (0xFFC00000 | (dir_index << 12));
+  unsigned long pt_index = (_page_no & 0x3FF000) >> 12;
+
+  //get frame number and release frame
+  unsigned long frame_no = (page_table[pt_index] & ~(0xFFF)) / PAGE_SIZE;
+  ContFramePool::release_frames(frame_no);
+
+  //set to invalid
+  page_table[pt_index] &= 0xFFE; //set invalid and make address 0 but keep other values
+
+  //flush TLB
+  write_cr3(read_cr3());
 }

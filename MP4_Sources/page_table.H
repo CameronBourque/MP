@@ -32,7 +32,8 @@
 /* FORWARDS */
 /*--------------------------------------------------------------------------*/
 
-/* -- (none) -- */
+struct Region;
+class VMPool;
 
 /*--------------------------------------------------------------------------*/
 /* P A G E - T A B L E  */
@@ -48,11 +49,13 @@ private:
   static ContFramePool * kernel_mem_pool;    /* Frame pool for the kernel memory */
   static ContFramePool * process_mem_pool;   /* Frame pool for the process memory */
   static unsigned long   shared_size;        /* size of shared address space */
+  static VMPool        * vm_list;            /* List of VM pools */
 
   /* DATA FOR CURRENT PAGE TABLE */
   unsigned long        * page_directory;     /* where is page directory located? */
 
 public:
+
   static const unsigned int PAGE_SIZE        = Machine::PAGE_SIZE; 
   /* in bytes */
   static const unsigned int ENTRIES_PER_PAGE = Machine::PT_ENTRIES_PER_PAGE; 
