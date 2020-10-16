@@ -117,7 +117,7 @@ void PageTable::handle_fault(REGS * _r)
     if(!(pde & 1))
     {
       //request a page for page table
-      unsigned long frame_no = vm_pool->frame_pool->get_frames(1);
+      unsigned long frame_no = process_mem_pool->get_frames(1);
       page_dir[dir_index] = (unsigned long)(frame_no << 12);
       page_dir[dir_index] |= 0x3;
     }
