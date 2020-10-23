@@ -1,8 +1,8 @@
 /*
  File: scheduler.C
  
- Author:
- Date  :
+ Author: Cameron Bourque
+ Date  : 10/23/2020
  
  */
 
@@ -46,22 +46,52 @@
 /*--------------------------------------------------------------------------*/
 
 Scheduler::Scheduler() {
-  assert(false);
+  ready_queue = NULL;
   Console::puts("Constructed Scheduler.\n");
 }
 
 void Scheduler::yield() {
-  assert(false);
+  Thread* iter = ready_queue;
+  ready_queue = ready_queue->next;
+  iter->next = NULL;
 }
 
 void Scheduler::resume(Thread * _thread) {
-  assert(false);
+  if(ready_queue == NULL)
+  {
+    ready_queue = _thread;
+  }
+  else
+  {
+    Thread* iter = ready_queue;
+    while(iter->next)
+    {
+      iter = iter->next;
+    }
+    iter->next = _thread;
+  }
 }
 
 void Scheduler::add(Thread * _thread) {
-  assert(false);
+  resume(_thread);
 }
 
 void Scheduler::terminate(Thread * _thread) {
-  assert(false);
+  //if thread is at front of queue
+  if(ready_queue == _thread)
+  {
+    ready_queue = ready_queue->next;
+    _thread->next = NULL;
+  }
+  //otherwise find the thread
+  else
+  {
+    Thread* iter = ready_queue;
+    while(iter->next != _thread)
+    {
+      iter = iter->next;
+    }
+    iter->next = _thread->next;
+    _thread->next = NULL;
+  }
 }

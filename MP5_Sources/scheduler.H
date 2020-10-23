@@ -57,6 +57,8 @@
 class Scheduler {
 
   /* The scheduler may need private members... */
+private:
+  Thread* ready_queue;
   
 public:
 
