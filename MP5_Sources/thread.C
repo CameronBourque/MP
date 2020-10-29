@@ -36,6 +36,7 @@
 #include "thread.H"
 
 #include "threads_low.H"
+#include "scheduler.H"
 
 /*--------------------------------------------------------------------------*/
 /* EXTERNS */
@@ -44,6 +45,8 @@
 Thread * current_thread = 0;
 /* Pointer to the currently running thread. This is used by the scheduler,
    for example. */
+
+extern Scheduler * SYSTEM_SCHEDULER;
 
 /* -------------------------------------------------------------------------*/
 /* LOCAL DATA PRIVATE TO THREAD AND DISPATCHER CODE */
@@ -72,6 +75,7 @@ static void thread_shutdown() {
        It terminates the thread by releasing memory and any other resources held by the thread. 
        This is a bit complicated because the thread termination interacts with the scheduler.
      */
+    SYSTEM_SCHEDULER->terminate(current_thread);
 
     assert(false);
     /* Let's not worry about it for now. 
@@ -81,8 +85,9 @@ static void thread_shutdown() {
 
 static void thread_start() {
      /* This function is used to release the thread for execution in the ready queue. */
-    
+     
      /* We need to add code, but it is probably nothing more than enabling interrupts. */
+     Machine::enable_interrupts();
 }
 
 void Thread::setup_context(Thread_Function _tfunction){
@@ -98,7 +103,7 @@ void Thread::setup_context(Thread_Function _tfunction){
           WHEN THE THREAD FUNCTION RETURNS. */
 
     /* ---- ARGUMENT TO THREAD FUNCTION */
-    push(0); /* At this point we don't have arguments. */
+    push(0x100); /* At this point we don't have arguments. */
 
     /* ---- ADDRESS OF SHUTDOWN FUNCTION */
     push((unsigned long) &thread_shutdown);
@@ -165,6 +170,7 @@ Thread::Thread(Thread_Function _tf, char * _stack, unsigned int _stack_size) {
 */
 
     /* -- INITIALIZE THREAD */
+    next = NULL;
 
     /* ---- THREAD ID */
    

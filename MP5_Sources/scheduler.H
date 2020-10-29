@@ -58,7 +58,11 @@ class Scheduler {
 
   /* The scheduler may need private members... */
 private:
-  Thread* ready_queue;
+  Thread* beg_queue;
+  Thread* end_queue;
+
+  Thread* idle_thread;
+  char* idle_stack;
   
 public:
 
