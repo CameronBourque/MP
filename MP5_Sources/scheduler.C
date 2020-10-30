@@ -69,7 +69,7 @@ void Scheduler::yield() {
   //need to disable interrupts if they are on
   if(Machine::interrupts_enabled())
   {
-    Machine::disable_interrupts();
+    Machine::disable_interrupts();	//This is for option 1
   }
 
   //get current thread
@@ -79,7 +79,7 @@ void Scheduler::yield() {
   if(curr == idle_thread && !beg_queue)
   {
     //need to enable interrupts before returning
-    Machine::enable_interrupts();
+    Machine::enable_interrupts();	//This is for option 1
     return;
   }
 
@@ -93,7 +93,7 @@ void Scheduler::yield() {
 
     //enable interrupts and dispatch idle thread
     Thread::dispatch_to(idle_thread);
-    Machine::enable_interrupts();
+    Machine::enable_interrupts();	//This is for option 1
     return;
   }
 
@@ -107,14 +107,14 @@ void Scheduler::yield() {
   beg_queue = beg_queue->next;
   Thread::dispatch_to(curr);
 
-  Machine::enable_interrupts();
+  Machine::enable_interrupts();		//This is for option 1
 }
 
 void Scheduler::resume(Thread * _thread) {
   //need to disable interrupts if they are on
   if(Machine::interrupts_enabled())
   {
-    Machine::disable_interrupts();
+    Machine::disable_interrupts();	//This is for option 1
   }
 
   //check if queue is empty
@@ -134,14 +134,14 @@ void Scheduler::resume(Thread * _thread) {
   _thread->next = NULL;
 
   //reenable interrupts
-  Machine::enable_interrupts();
+  Machine::enable_interrupts();		//This is for option 1
 }
 
 void Scheduler::add(Thread * _thread) {
   //need to disable interrupts if they are on
   if(Machine::interrupts_enabled())
   {
-    Machine::disable_interrupts();
+    Machine::disable_interrupts();	//This is for option 1
   }
 
   //call resume
@@ -152,7 +152,7 @@ void Scheduler::terminate(Thread * _thread) {
   //need to disable interrupts if they are on
   if(Machine::interrupts_enabled())
   {
-    Machine::disable_interrupts();
+    Machine::disable_interrupts();	//This is for option 1
   }
 
   //if thread is current thread then yield but don't replace at back
@@ -169,7 +169,7 @@ void Scheduler::terminate(Thread * _thread) {
     Thread::dispatch_to(ready);
 
     //reenable interrupts
-    Machine::enable_interrupts();
+    Machine::enable_interrupts();	//This is for option 1
     return;
   }
 
@@ -200,5 +200,5 @@ void Scheduler::terminate(Thread * _thread) {
   _thread->next = NULL;
 
   //reenable interrupts
-  Machine::enable_interrupts();
+  Machine::enable_interrupts();		//This is for option 1
 }

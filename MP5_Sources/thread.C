@@ -124,7 +124,7 @@ void Thread::setup_context(Thread_Function _tfunction){
      * thread starts.
      */
     /* ---- EFLAGS */
-    push(0x200);
+    push(0x200);	//I set this to 0x200 for option 1
     /* Clear the IF bit to disable interrupts when thread starts. */
 
     /* ---- CS and EIP REGISTERS */
