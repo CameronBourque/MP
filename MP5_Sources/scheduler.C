@@ -58,7 +58,6 @@ Scheduler::Scheduler() {
   //set up idle thread
   idle_stack = new char[1024];
   idle_thread = new Thread(idle, idle_stack, 1024);
-  Console::puts("idle thread esp");Console::putui((unsigned long)idle_thread);Console::puts("\n");
 
   //set up ready queue
   beg_queue = NULL;
@@ -67,6 +66,12 @@ Scheduler::Scheduler() {
 }
 
 void Scheduler::yield() {
+  //need to disable interrupts if they are on
+  if(Machine::interrupts_enabled())
+  {
+    Machine::disable_interrupts();
+  }
+
   //get current thread
   Thread* curr = Thread::CurrentThread();
 
@@ -81,8 +86,6 @@ void Scheduler::yield() {
   end_queue = curr;
   curr->next = NULL;
 
-  Console::puts("yielded\n");
-  Console::puts("dispatching to: ");Console::putui((unsigned long)beg_queue);Console::puts("\n");
   //dispatch next thread
   curr = beg_queue;
   beg_queue = beg_queue->next;
@@ -90,6 +93,12 @@ void Scheduler::yield() {
 }
 
 void Scheduler::resume(Thread * _thread) {
+  //need to disable interrupts if they are on
+  if(Machine::interrupts_enabled())
+  {
+    Machine::disable_interrupts();
+  }
+
   //check if queue is empty
   if(!beg_queue)
   {
@@ -106,23 +115,28 @@ void Scheduler::resume(Thread * _thread) {
   //make sure this thread's next is null
   _thread->next = NULL;
 
-  Console::puts("resumed\n");
+  //reenable interrupts
+  Machine::enable_interrupts();
 }
 
 void Scheduler::add(Thread * _thread) {
+  //need to disable interrupts if they are on
+  if(Machine::interrupts_enabled())
+  {
+    Machine::disable_interrupts();
+  }
+
   //call resume
   resume(_thread);
-  Console::puts("added\nQueue list:\n");
-
-  Thread * iter = beg_queue;
-  while(iter)
-  {
-    Console::putui((unsigned long)iter);Console::puts("\n");
-    iter = iter->next;
-  }
 }
 
 void Scheduler::terminate(Thread * _thread) {
+  //need to disable interrupts if they are on
+  if(Machine::interrupts_enabled())
+  {
+    Machine::disable_interrupts();
+  }
+
   //if thread is current thread then dispatch and don't replace at back
   if(_thread == Thread::CurrentThread())
   {
@@ -135,7 +149,6 @@ void Scheduler::terminate(Thread * _thread) {
     }
 
     Thread::dispatch_to(ready);
-    Console::puts("terminated\n");
     return;
   }
 
@@ -164,5 +177,7 @@ void Scheduler::terminate(Thread * _thread) {
 
   //make sure it has no ties to the queue
   _thread->next = NULL;
-  Console::puts("terminated\n");
+
+  //reenable interrupts
+  Machine::enable_interrupts();
 }
