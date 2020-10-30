@@ -39,7 +39,7 @@
 /* FORWARDS */
 /*--------------------------------------------------------------------------*/
 
-extern Scheduler * SYSTEM_SCHEDULER;
+extern Scheduler * SYSTEM_SCHEDULER; //extern for kernel defined scheduler
 
 /*--------------------------------------------------------------------------*/
 /* METHODS FOR CLASS   S c h e d u l e r  */
@@ -78,10 +78,26 @@ void Scheduler::yield() {
   //if idle and nothing in queue then return
   if(curr == idle_thread && !beg_queue)
   {
+    //need to enable interrupts before returning
+    Machine::enable_interrupts();
     return;
   }
 
-  //take front of queue and move to back
+  //if the ready queue is empty
+  if(!beg_queue)
+  {
+    //fill ready queue
+    beg_queue = curr;
+    end_queue = curr;
+    curr->next = NULL;
+
+    //enable interrupts and dispatch idle thread
+    Thread::dispatch_to(idle_thread);
+    Machine::enable_interrupts();
+    return;
+  }
+
+  //move current thread to back of queue
   end_queue->next = curr;
   end_queue = curr;
   curr->next = NULL;
@@ -90,6 +106,8 @@ void Scheduler::yield() {
   curr = beg_queue;
   beg_queue = beg_queue->next;
   Thread::dispatch_to(curr);
+
+  Machine::enable_interrupts();
 }
 
 void Scheduler::resume(Thread * _thread) {
@@ -137,7 +155,7 @@ void Scheduler::terminate(Thread * _thread) {
     Machine::disable_interrupts();
   }
 
-  //if thread is current thread then dispatch and don't replace at back
+  //if thread is current thread then yield but don't replace at back
   if(_thread == Thread::CurrentThread())
   {
     _thread->next == NULL;
@@ -149,6 +167,9 @@ void Scheduler::terminate(Thread * _thread) {
     }
 
     Thread::dispatch_to(ready);
+
+    //reenable interrupts
+    Machine::enable_interrupts();
     return;
   }
 

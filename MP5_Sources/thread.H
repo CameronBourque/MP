@@ -65,7 +65,7 @@ private:
     */
  
 public:
-    Thread * next;
+    Thread * next; //pointer to next thread in ready queue
  
     Thread(Thread_Function _tf, char * _stack, unsigned int _stack_size);
     /* Create a thread that is set up to execute the given thread function. 
