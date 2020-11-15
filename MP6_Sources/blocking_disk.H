@@ -1,10 +1,10 @@
 /*
      File        : blocking_disk.H
 
-     Author      : 
+     Author      : Cameron Bourque
 
-     Date        : 
-     Description : 
+     Date        : 11/14/2020
+     Description : Blocking disk class implementation
 
 */
 
@@ -22,6 +22,7 @@
 /*--------------------------------------------------------------------------*/
 
 #include "simple_disk.H"
+#include "thread.H"
 
 /*--------------------------------------------------------------------------*/
 /* DATA STRUCTURES */ 
@@ -34,6 +35,20 @@
 /*--------------------------------------------------------------------------*/
 
 class BlockingDisk : public SimpleDisk {
+private:
+   //Blocking queue beginning and end
+   Thread* beg_queue;
+   Thread* end_queue;
+
+   //Gives access to blocking disk about disk id and size since they are private
+   DISK_ID disk_id;
+   unsigned int size;
+
+   //Issue operation to read or write. Here since simple disk has this private
+   void issue_operation(DISK_OPERATION _op, unsigned long _block_no);
+   //New wait until ready implementation with no busy wait
+   void wait_until_ready();
+
 public:
    BlockingDisk(DISK_ID _disk_id, unsigned int _size); 
    /* Creates a BlockingDisk device with the given size connected to the 
