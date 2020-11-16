@@ -36,10 +36,6 @@
 
 class BlockingDisk : public SimpleDisk {
 private:
-   //Blocking queue beginning and end
-   Thread* beg_queue;
-   Thread* end_queue;
-
    //Gives access to blocking disk about disk id and size since they are private
    DISK_ID disk_id;
    unsigned int size;
@@ -50,6 +46,10 @@ private:
    void wait_until_ready();
 
 public:
+   //Blocking queue beginning and end
+   Thread* beg_queue;
+   Thread* end_queue;
+
    BlockingDisk(DISK_ID _disk_id, unsigned int _size); 
    /* Creates a BlockingDisk device with the given size connected to the 
       MASTER or SLAVE slot of the primary ATA controller.
@@ -65,6 +65,9 @@ public:
 
    virtual void write(unsigned long _block_no, unsigned char * _buf);
    /* Writes 512 Bytes from the buffer to the given block on the disk. */
+
+   virtual bool is_ready() { return SimpleDisk::is_ready(); }
+   /* Checks if the disk is ready to be operated on */
 
 };
 

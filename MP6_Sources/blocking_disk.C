@@ -73,26 +73,30 @@ void BlockingDisk::wait_until_ready() {
     end_queue = curr;
     curr->next = NULL;
 
-    //yield the running thread to let something else run
-    SYSTEM_SCHEDULER->yield();
-
-    //thread is resumed so dequeue and run I/O operation
-    curr = beg_queue;
-    if(end_queue == beg_queue) {
-      end_queue = end_queue->next;
-    }
-    beg_queue = beg_queue->next;
-    SYSTEM_SCHEDULER->resume(curr);
+    //block the running thread to let something else run
+    SYSTEM_SCHEDULER->block();
   }
 }
 
 void BlockingDisk::read(unsigned long _block_no, unsigned char * _buf) {
+  //check if other threads are waiting on disk
+  if(beg_queue != NULL) {
+    //add thread to blocked queue
+    Thread * curr = Thread::CurrentThread();
+    end_queue->next = curr;
+    curr->next = NULL;
+    
+    //block thread
+    SYSTEM_SCHEDULER->block();
+  }
+
+  //issue read operation
   issue_operation(READ, _block_no);
 
-  //Wait for disk to be ready
+  //wait for disk to be ready
   wait_until_ready();
 
-  //Read data from port
+  //read data from port
   int i;
   unsigned short tmpw;
   for(i = 0; i < 256; i++) {
@@ -104,12 +108,24 @@ void BlockingDisk::read(unsigned long _block_no, unsigned char * _buf) {
 
 
 void BlockingDisk::write(unsigned long _block_no, unsigned char * _buf) {
+  //check if other threads are waiting on disk
+  if(beg_queue != NULL) {
+    //add thread to blocked queue
+    Thread * curr = Thread::CurrentThread();
+    end_queue->next = curr;
+    curr->next = NULL;
+    
+    //block thread
+    SYSTEM_SCHEDULER->block();
+  }
+
+  //issue write operation
   issue_operation(WRITE, _block_no);
 
-  //Wait for disk to be ready
+  //wait for disk to be ready
   wait_until_ready();
 
-  //Write data to port
+  //write data to port
   int i;
   unsigned short tmpw;
   for(i = 0; i < 256; i++) {

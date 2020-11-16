@@ -80,6 +80,10 @@ public:
       the CPU, and calls the dispatcher function defined in 'Thread.H' to
       do the context switch. */
 
+   virtual void block();
+   /* Called by the currently running thread when it is blocked by an I/O
+      device. */
+
    virtual void resume(Thread * _thread);
    /* Add the given thread to the ready queue of the scheduler. This is called
       for threads that were waiting for an event to happen, or that have 
