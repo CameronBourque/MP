@@ -133,9 +133,7 @@ void Scheduler::yield() {
   //dispatch next thread
   curr = beg_queue;
   beg_queue = beg_queue->next;
-  Console::puts("dispatching ");Console::putui((unsigned long) curr);Console::puts("\n");
   Thread::dispatch_to(curr);
-  Console::puts("dispatched ");Console::putui((unsigned long) curr);Console::puts("\n");
 
   //reenable the interrupts()
   Machine::enable_interrupts();
