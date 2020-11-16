@@ -104,7 +104,7 @@ Scheduler * SYSTEM_SCHEDULER;
 /*--------------------------------------------------------------------------*/
 
 /* -- A POINTER TO THE SYSTEM DISK */
-BlockingDisk * SYSTEM_DISK;
+BlockingDisk * SYSTEM_DISK; //Made this a BlockingDisk to test my implementation
 
 #define SYSTEM_DISK_SIZE (10 MB)
 
@@ -287,6 +287,7 @@ int main() {
 
     /* -- DISK DEVICE -- */
 
+    // Made this create a blocking disk instead of a simple disk object
     SYSTEM_DISK = new BlockingDisk(MASTER, SYSTEM_DISK_SIZE);
    
     /* NOTE: The timer chip starts periodically firing as 
@@ -303,7 +304,7 @@ int main() {
     Console::puts("Hello World!\n");
 
     /* -- LET'S CREATE SOME THREADS... */
-
+    // ***Updated the stack size to 4096 for all threads so the stack isn't corrupted***
     Console::puts("CREATING THREAD 1...\n");
     char * stack1 = new char[4096];
     thread1 = new Thread(fun1, stack1, 4096);
