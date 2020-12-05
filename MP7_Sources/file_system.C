@@ -112,5 +112,6 @@ bool FileSystem::DeleteFile(int _file_id) {
     //delete the file
     files[_file_id]->Rewrite();
     delete files[_file_id];
+    files[_file_id] = NULL;
     return true;
 }
