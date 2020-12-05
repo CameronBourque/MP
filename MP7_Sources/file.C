@@ -26,11 +26,16 @@
 /* CONSTRUCTOR */
 /*--------------------------------------------------------------------------*/
 
-File::File() {
+File::File(unsigned long _file_id, unsigned int _size, SimpleDisk * _disk) {
     /* We will need some arguments for the constructor, maybe pointer to disk
      block with file management and allocation data. */
     Console::puts("In file constructor.\n");
-    assert(false);
+
+    //set private variables
+    file_id = _file_id;
+    size = _size;
+    disk = _disk;
+    pos = 0;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -39,28 +44,83 @@ File::File() {
 
 int File::Read(unsigned int _n, char * _buf) {
     Console::puts("reading from file\n");
-    assert(false);
+
+    //read disk contents to buffer
+    char * buf = new char[512];
+    disk->read(file_id, buf);
+
+    //get from the current position and increment    
+    unsigned int i = 0;
+    for(i = 0; i < _n; i++)
+    {
+      _buf[i] = buf[pos];
+      pos++;
+
+      //if we reach eof then stop reading
+      if(EoF())
+      {
+        break;
+      }
+    }
+
+    //return amount read
+    delete buf;
+    return (int)i;
 }
 
 
 void File::Write(unsigned int _n, const char * _buf) {
     Console::puts("writing to file\n");
-    assert(false);
+
+    //read buffer from disk
+    char * buf = new char[512];
+    disk->read(file_id, buf);
+
+    //go through file and write to it
+    unsigned int i = 0;
+    for(i = 0; i < _n; i++)
+    {
+      //set current position to current index in passed in buffer
+      buf[pos] = _buf[i];
+      pos++;
+
+      //if eof increase the size
+      if(EoF())
+      {
+        size++;
+      }
+    }
+
+    //write updated buffer to disk
+    disk->write(file_id, buf);
+    delete buf;
 }
 
 void File::Reset() {
     Console::puts("reset current position in file\n");
-    assert(false);
-    
+    //set current position to start index
+    pos = 0;
 }
 
 void File::Rewrite() {
     Console::puts("erase content of file\n");
-    assert(false);
+    
+    //set each spot in the buffer to 0
+    char * buf = new char[512];
+    unsigned long i = 0;
+    for(i = 0; i < size; i++)
+    {
+      buf[i] = 0;
+    }
+
+    //write file to disk
+    disk->write(file_id, buf);
+    delete buf;
 }
 
 
 bool File::EoF() {
     Console::puts("testing end-of-file condition\n");
-    assert(false);
+    //if current position is at size index
+    return pos == size;
 }
