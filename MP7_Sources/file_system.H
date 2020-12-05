@@ -37,7 +37,7 @@
 /* FORWARD DECLARATIONS */ 
 /*--------------------------------------------------------------------------*/
 
-/* -- (none) -- */
+class File;
 
 /*--------------------------------------------------------------------------*/
 /* F i l e S y s t e m  */
@@ -50,11 +50,11 @@ friend class File; /* -- not sure if we need this; feel free to delete */
 private:
      /* -- DEFINE YOUR FILE SYSTEM DATA STRUCTURES HERE. */
      
-     SimpleDisk * disk;
-     unsigned int size;
+    SimpleDisk * disk; //disk file system is attached to
+    File ** files; //array of created files
+    unsigned int size; //size of disk allocated to file system
      
 public:
-
     FileSystem();
     /* Just initializes local data structures. Does not connect to disk yet. */
     

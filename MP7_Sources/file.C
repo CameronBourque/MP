@@ -46,14 +46,14 @@ int File::Read(unsigned int _n, char * _buf) {
     Console::puts("reading from file\n");
 
     //read disk contents to buffer
-    char * buf = new char[512];
+    unsigned char * buf = new unsigned char[512];
     disk->read(file_id, buf);
 
     //get from the current position and increment    
     unsigned int i = 0;
     for(i = 0; i < _n; i++)
     {
-      _buf[i] = buf[pos];
+      _buf[i] = (char)buf[pos];
       pos++;
 
       //if we reach eof then stop reading
@@ -73,7 +73,7 @@ void File::Write(unsigned int _n, const char * _buf) {
     Console::puts("writing to file\n");
 
     //read buffer from disk
-    char * buf = new char[512];
+    unsigned char * buf = new unsigned char[512];
     disk->read(file_id, buf);
 
     //go through file and write to it
@@ -81,7 +81,7 @@ void File::Write(unsigned int _n, const char * _buf) {
     for(i = 0; i < _n; i++)
     {
       //set current position to current index in passed in buffer
-      buf[pos] = _buf[i];
+      buf[pos] = (unsigned char)_buf[i];
       pos++;
 
       //if eof increase the size
@@ -106,7 +106,7 @@ void File::Rewrite() {
     Console::puts("erase content of file\n");
     
     //set each spot in the buffer to 0
-    char * buf = new char[512];
+    unsigned char * buf = new unsigned char[512];
     unsigned long i = 0;
     for(i = 0; i < size; i++)
     {
